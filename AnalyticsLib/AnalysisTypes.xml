@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE AnalyticsML>
+<Analyses>
+<TagSet Filename="footTrafficAnalytics" StatName="Foot Traffic"
+        DocType="FootTrafficML" DocRootTag="FootTraffic"
+        ElementTag="User" IDAttribute="id" ProjectAttribute="project"
+        StartAttribute="entry" EndAttribute="exit"
+        TimeFormat="MM/dd/yyyy hh:mm:ss"   />
+
+<TagSet Filename="analyticsData" StatName="Kul Data"
+        DocType="KulML" DocRootTag="analytics"
+        ElementTag="data" IDAttribute="duration" ProjectAttribute="projectName"
+        StartAttribute="timeStart" EndAttribute="timeEnd"
+        TimeFormat="MM/dd/yyyy hh:mm:ss"   />
+</Analyses>
+

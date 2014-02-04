@@ -1,0 +1,365 @@
+<html>
+  <head>
+    <title> Web Analytics </title>
+
+    <script src="javascript/jquery-1.10.2.js"></script>
+    <script src="javascript/jquery-ui.js"></script>
+    <script src="javascript/jquery.ptTimeSelect.js"></script>
+    <script src="javascript/date.format.js"></script>
+    <script src="javascript/jquery.form.js"></script>
+    <script src="javascript/jquery.flot.js"> </script>
+    <script src="javascript/jquery.flot.categories.js"> </script>
+    <script src="javascript/jquery.flot.axislabels.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="css/jquery.ptTimeSelect.css" media="screen" />
+    <link rel="stylesheet" href="css/jquery-ui.css" />
+    <link rel="stylesheet" href="css/examples.css">
+
+    <script>
+
+
+     $(document).ready(function() {
+
+       // initialize date time picker
+       $(function()
+         {
+           $( "#datepicker" ).datepicker();
+         });
+
+       $(function() {
+         $('input[name="timepicker"]').ptTimeSelect();
+       });
+
+       // set default date time
+	 gnow = new Date();
+	 date_str = dateFormat(gnow,("mm/dd/yyyy"));
+	 time_str=dateFormat(gnow, "h")+":00 " +  dateFormat(gnow, "T") + "M";
+	 $('input[name="datepicker"]').val(date_str);
+	 $('input[name="timepicker"]').val(time_str);
+
+
+       // set default GUI choices
+       var lastselector= $("[name=lastselector]")
+       lastselector.val(0);
+       $('input:radio[name=statType]')[0].checked=true;
+       periodType = $('input:radio[name=periodType]');
+       periodType[0].checked=true;
+       aggDiv = $("#aggregationDiv");
+       aggDiv.hide();
+       $('input:radio[name=aggType]')[0].checked=true;
+
+       // show aggregation choices only if period type is WEEKS
+       periodType.change(
+         function(event) {
+	     if (periodType[0].checked==true)
+           {
+             aggDiv.hide();
+           }
+           else {
+             aggDiv.show();
+           }
+         });
+
+
+       // verifies that all form fields are filled out after hitting SUBMIT button
+       // if form is valid, call AJAX function
+       // if not, alert an error message
+       function formIsValid()
+       {
+       filename=$("#fileUpload").val()
+
+       
+       if (! /csv/.test(filename))
+       {
+         alert("You must first select a valid csv file for analysis");
+         return false;
+       }
+
+         if($('input:radio[name=statType]:checked').length < 1)
+         {
+           alert("You must first choose an statistic type");
+           $('input:radio[name=statType]').focus()
+           return false;
+         }
+
+           if ($("#datepicker").val().length < 1)
+           {
+             alert ("You must specify a terminal date");
+                return false
+           }
+           if ($("#timepicker").val().length < 1)
+           {
+             $("#timepicker").val("12:00 AM");
+           }
+
+         if($('#previousQty').val() < 1)
+         {
+           alert("You must first choose a quantity of time");
+           $('#previousQty').focus();
+           return false;
+         }
+         if($('input:radio[name=periodType]:checked').length < 1)
+         {
+           alert("You must first choose a time period type");
+           $('input:radio[name=periodType]').focus();
+           return false;
+         }
+
+         if($('input:radio[name=aggType]').val().length < 1)
+         {
+           alert("You must first choose an analysis type");
+           setfocus()
+           return false;
+
+         }
+
+         return true;
+       }
+
+
+       /*
+
+       PERSISTENT RECORD OF GRAPHS:
+       */
+
+       // persistent array for recording graphs currently on display
+       createdGraphs = new Array();
+       numGraphs = 0;
+
+
+       // erases all graphs from dislplay
+       function clearAllGraphs()
+       {
+         createdGraphs=new Array();
+         $("#graphs").empty();
+         numGraphs=0;
+       }
+
+       // adds data about new graph to array
+       function   appendGraphRecord(filename, statType, lastTime, previousQty, previousPeriod, aggregationType)
+       {
+         createdGraphs.push([filename, statType, lastTime, previousQty, previousPeriod, aggregationType]);
+         numGraphs++;
+       }
+
+       // Verifies that graph has not already been drawn.
+       // If true, graph is drawn
+       // If false, an alert error message is displayed
+       function graphIsUnique(filename, statType, lastTime, previousQty, previousPeriod, aggregationType)
+       {
+         filename = $('#fileSelector').val();
+         if (createdGraphs.length >0 && createdGraphs[0][0] != filename)
+         {
+           clearAllGraphs();
+         }
+         statType = $('input:radio[name=statType]:checked').val();
+         lastTime = ($('#lastselector option:selected').val() == "now")? "now" : $("#datepicker").val() +  $("#timepicker").val();
+         previousQty = $('#previousQty').val();
+         previousPeriod = $('input:radio[name=periodType]:checked').val()
+         aggregationType =  $('input:radio[name=aggType]:checked').val()
+
+
+         // Graph is the same if all fields are the same
+         for (i=0; i<createdGraphs.length; i++)
+         {
+           if (statType == createdGraphs[i][1] &&
+               lastTime == createdGraphs[i][2] &&
+               previousQty == createdGraphs[i][3] &&
+               previousPeriod == createdGraphs[i][4] &&
+               aggregationType == createdGraphs[i][5]  )
+           {
+	   alert("Graph already drawn");
+             return false;
+           }
+         }
+
+         // graph is added to persistent array
+         appendGraphRecord(filename, statType, lastTime, previousQty, previousPeriod, aggregationType);
+         return true;
+       }
+
+
+
+
+       // Persistent Array for recording the XValues of all graphs
+       // Needed for tooltip functioning
+       everyGraphXes = Array();
+
+
+       // AJAX for form submit
+       $("#analyticsForm").submit(function(event) {
+         // check form validity
+         event.preventDefault();
+         if (! formIsValid() ||  ! graphIsUnique())
+         {
+         }
+
+         else
+         {
+
+           // Create new div for new graph
+           newDivName = "graphDiv" + numGraphs;
+
+           // AJAX POST using jQuery 
+
+             $.post("Analyze.php", {
+		 fileSelector: $("#fileUpload").val(),
+		 statType    : $('input:radio[name=statType]:checked').val(),
+		 lastselector: "chooseDT",
+		 datepicker  : $("#datepicker").val(),
+		 timepicker  : $("#timepicker").val(),
+		 periodType  : $('input:radio[name=periodType]:checked').val(),
+		 aggType     : $('input:radio[name=aggType]:checked').val()
+	     },
+
+                    // On success, run the following:
+                  function( data )
+                  {
+               // parse AJAX return value to get graph labels and points
+               var graphInfo = data.split("#####")
+               xLabel=graphInfo[0]
+               yLabel=graphInfo[1]
+               title=graphInfo[2]
+
+               // points
+               allPoints=graphInfo[3] 
+	       var points = allPoints.split( "\[")
+               points.shift()
+
+               // make div for graph
+               $("#graphs").prepend("<h3>"+title+"</h3>\n<div id=\"" + newDivName +"\" style=\"width:600px;height:300px\"></div>");
+
+               // add names of X coordinates to persistent array
+               // Needed for Tooltip rollovers
+	       allXes=Array();
+               for (var i = 0; i<points.length;i++)
+               { points[i]=points[i].split(",");
+		allXes.push(points[i][0]);
+		}
+	       everyGraphXes.push(allXes);
+
+               // only label the graph at the first and last points
+               firstPoint = points[0][0]
+	       lastPoint = points[points.length-1][0]
+	       txs = new Array()
+	       txs.push([0,firstPoint])
+	       txs.push([points.length-1,lastPoint])
+
+               d2=points
+
+               // Plot the graph in the new Div
+               $.plot("#" + newDivName,
+                      [d2],
+                      {
+                   lines: {show: true, fill: true},
+                   points: {show: true } ,
+                   xaxis: {mode: "categories", axisLabel: xLabel, ticks: txs},
+                   yaxis: {axisLabel: yLabel },
+                   grid: {hoverable: true,clickable: true       }
+                 });
+
+
+               /*
+               TOOLTIP ROLLOVERS FOR POINTS ON GRAPHS
+               */
+
+               // For showing Tooltips
+               function showTooltip(x, y, contents) {
+                 $("<div id='tooltip'>" + contents + "</div>").css({
+                   position: "absolute",
+                   display: "none",
+                   top: y + 5,
+                   left: x + 5,
+	           border: "1px solid #fdd",
+	           padding: "2px",
+	           "background-color": "#fee",
+	           opacity: 0.80
+	         }).appendTo("body").fadeIn(200);
+               }
+
+
+               var previousPoint = null;
+
+
+               $("#" + newDivName).bind("plothover", function (event, pos, item)
+			                {
+                   // find the div were the rollover is occuring
+                   thusd= this.id;
+		   y_label = $(this).find(".axisLabels").next().html();
+		   if (true) {
+	             if (item) {
+	               if (previousPoint != item.dataIndex) {
+                         // remove previous tooltip
+	                 previousPoint = item.dataIndex;
+			 divIndex = thusd.replace(/\D/g,'');
+	                 $("#tooltip").remove();
+
+                         // add new tooltip
+			 var x = everyGraphXes[divIndex-1][item.dataIndex];  
+	                 y = item.datapoint[1].toFixed(2);
+	                 showTooltip(item.pageX, item.pageY,
+			             y_label + " on " + x + " = " + y);
+	               }
+	             } else {  // remove previous tooltip
+	               $("#tooltip").remove();
+	               previousPoint = null;
+	             }
+	           }
+                 });
+             });
+         }
+       });
+     });
+    </script>
+  </head>
+  <body>
+    <form action="" method="POST" id="analyticsForm"  name="analyticsForm">
+      <div id="fileDiv">
+        <label> Choose File:</label> <input name="fileUpload" id="fileUpload"  type="file">
+      </div>
+
+      <div id="lastTimeDiv" name="lastTimeDiv">
+	<label for="Calendar"> Choose Date: </label>
+      </div>
+      <div id="datetimepicker" name="datetimepicker">
+	<p>Date: <input type="text" id="datepicker" name="datepicker" /></p>
+	<p>Time: <input type="text" id="timepicker" name="timepicker" /></p>
+      </div>
+
+
+      <div id="statTypeDiv" name="statTypeDiv">
+	<label for="statTypeDiv"> Statistic Type: </label>
+	<div name="statTypeDiv">
+	  <input type="radio" name="statType" id="total" value="total"> <label for="total">Total Session Count </label><br>
+	  <input type="radio" name="statType" id="average" value="average"> <label for="average">Average Session Duration</label>
+	</div>
+      </div>
+
+      <div id="previousPeriodDiv" name="previousPeriodDiv">
+	<label for="periodTypeDiv">TimePeriod</label>
+	<div name="periodTypeDiv">
+	  <input type="radio" name="periodType" id="period_hr" value="hours"> 24 Hours back from above date <br>
+	  <input type="radio" name="periodType" id="period_wk" value="weeks"> 4 Weeks back from above date 
+	</div>
+      </div>
+
+      <div id="aggregationDiv" name="aggregationDiv">
+        <label for="aggTypeDiv"> Aggregation Type: </label>
+	<div name="aggTypeDiv">
+	  <input type="radio" name="aggType" id="aggType" value="none"> None <br>
+	  <input type="radio" name="aggType" id="aggType" value="tod"> Display graph by Hour of Day <br>
+	  <input type="radio" name="aggType" id="aggType" value="dow"> Display graph by Day of Week<br>
+	</div>
+      </div>
+
+      <hr>
+      <input type="submit">
+    </form>
+
+    <div id="graphs">
+    </div>
+
+  </body>
+</html>
+
+

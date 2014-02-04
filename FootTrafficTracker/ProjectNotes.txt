@@ -1,0 +1,28 @@
+he file that we talked about earlier is called ".represents.kbpf", which resides in the ".represents" folder. When you're writing a timestamp to the analytics file, add another attribute to the data called "projectName". Just check for the "active" property in the .represents.kbpf file. Use the CurioKulBooks class in the "dsionRepresent" project to read the .represents.kbpf file.
+
+
+
+4 gig maximum file size fror a file
+the maximum size of the 1 gig file size 
+one gigcreate a new analytics file
+foot trafiic analytics file one two three 
+on demand 
+create a new 
+
+control all of our engines out there 
+pull the latest one  
+just in case we want the full history 
+
+on read or write 
+
+create a new file
+
+make a special folder 
+
+name it ANALYTIC FILES in project file  
+and put the analytic files in there 
+
+give me the code after
+
+another app that we will have in house 
+that we will have in house to read the analytics
